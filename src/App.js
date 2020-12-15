@@ -18,13 +18,8 @@ const App = () => {
   const [data, setData] = useState([]);
   const [dataRangeTime, setDataRangeTime] = useState([]);
 
-  console.log('Data init: ', data);
-
   const options = {
     connectTimeout: 4000,
-
-    clientId: 'emqx',
-
     keepalive: 60,
     clean: true,
     path: '/mqtt',
@@ -32,16 +27,10 @@ const App = () => {
 
   // WebSocket connect url
   const WebSocket_URL = 'ws://broker.emqx.io:8083';
-
-  // TCP/TLS connect url
-  // const TCP_URL = 'mqtt://broker.emqx.io:1883';
-  // const TCP_TLS_URL = 'mqtts://broker.emqx.io:8883';
-
   const client = mqtt.connect(WebSocket_URL, options);
 
-  // client.on('connect', () => {
-  //   console.log('Connect success');
-  // });
+  const MAX_POINT = 60; // 60 seconds
+
   client.subscribe('haupc/123', { qos: 1 }, (error) => {
     if (!error) {
       console.log('Subscribe Success');
@@ -56,11 +45,22 @@ const App = () => {
     const rawData = message.toString();
     const jsonData = JSON.parse(rawData);
 
-    globalData = [...globalData, jsonData];
-    setData(globalData);
+    var found = false;
+    for(var i = 0; i < globalData.length; i++) {
+        if (globalData[i].CreatedAt === jsonData.CreatedAt) {
+            found = true;
+            break;
+        }
+    }
 
-    // disconnect
-    // client.end();
+    if (!found) {
+      globalData = [...globalData, jsonData];
+      if (globalData.length > MAX_POINT) {
+        globalData = globalData.slice(1);
+      }
+      console.log('Data: ', globalData);
+      setData(globalData);
+    }
   });
 
   const [isCheck, setCheck] = useState(false);
